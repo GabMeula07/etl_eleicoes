@@ -1,4 +1,5 @@
 import pandas as pd
+import sys
 import os
 from dotenv import load_dotenv
 import sqlalchemy as sqla
@@ -30,6 +31,7 @@ columns_eleicoes = [
     "DS_CARGO",
     "NM_CANDIDATO",
     "NM_PARTIDO",
+    "DT_ELEICAO",
     "DS_GENERO",
     "DS_GRAU_INSTRUCAO",
     "DS_OCUPACAO",
@@ -39,6 +41,7 @@ columns_eleicoes = [
 columns_bens = [
     "ANO_ELEICAO",
     "DS_ELEICAO",
+    'DT_ELEICAO',
     "SQ_CANDIDATO",
     "DS_TIPO_BEM_CANDIDATO",
     "VR_BEM_CANDIDATO",
@@ -64,10 +67,12 @@ renamed_columns_eleicoes = {
     "DS_OCUPACAO": "ocupacao",
     "NM_PARTIDO": "nome_partido",
     "SG_UF": "estado",
+    'DT_ELEICAO': 'data_eleicao'
 }
 renamed_columns_bem = {
     "ANO_ELEICAO": "ano_eleicao",
     "DS_ELEICAO": "eleicao",
+    'DT_ELEICAO': "data_eleicao",
     "SQ_CANDIDATO": "id_candidato",
     "DS_TIPO_BEM_CANDIDATO": "tipo_bem",
     "VR_BEM_CANDIDATO": "valor_bem",
@@ -136,15 +141,18 @@ def update_eleicoes():
                 "cargo",
                 "nome_partido",
                 "ano_eleicao",
+                "data_eleicao",
                 "eleicao",
                 "estado",
                 "genero",
                 "grau_de_instrucao",
                 "cor_raca",
                 "ocupacao",
+
             ],
             axis=1,
         )
+        df_renamed['data_eleicao'] = pd.to_datetime(df_renamed['data_eleicao'], dayfirst=True)
         df_to_database("eleicoes", df_renamed, engine)
 
 
@@ -156,14 +164,23 @@ def update_bem():
         df = create_df_bens(columns_bens, year)
         df_renamed = rename_columns(df, renamed_columns_bem)
         df_renamed = df_renamed.reindex(
-            ["id_candidato", "eleicao", "ano_eleicao", "tipo_bem", "valor_bem"],
+            ["id_candidato", "eleicao", "ano_eleicao","data_eleicao", "tipo_bem", "valor_bem"],
             axis=1,
         )
+        df_renamed['valor_bem'] = df_renamed['valor_bem'].str.replace(',', '.')
+        df_renamed['data_eleicao'] = pd.to_datetime(df_renamed['data_eleicao'], dayfirst=True)
+      
+    
         df_to_database('bem_candidato', df_renamed, engine)
 
 
 def main():
-    update_eleicoes()
-    update_bem()
+    if sys.argv[1] == '--candidato':
+        update_eleicoes()
+    elif sys.argv[1] == '--bem_candidato':
+        update_bem()
+    else:
+        update_eleicoes()
+        update_bem()
 
 main()
